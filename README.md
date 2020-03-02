@@ -1,6 +1,8 @@
 RV correction
 ======
 
+Correct for radial velocity shifts. 
+
 It is run:
 
 ```python
