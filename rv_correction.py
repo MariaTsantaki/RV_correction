@@ -6,7 +6,7 @@ from PyAstronomy import pyasl
 from observations import read_obs_intervals, read_observations, snr
 import matplotlib.pyplot as plt
 
-def rv_correction(filename, velocity):
+def rv_correction(filename, velocity, output = "auto"):
     c = 299792.458 #km s-1
     hdulist = fits.open(filename)
     header = hdulist[0].header #read header
@@ -24,7 +24,11 @@ def rv_correction(filename, velocity):
     #print relat_wave
     #print relat_step
     #Save results
-    hdulist.writeto(filename[:-5]+"_rv.fits", overwrite=True)
+    if output == "auto":
+        outputfile = filename[:-5]+"_rv.fits"
+    else: 
+        outputfile = output 
+    hdulist.writeto(outputfile, overwrite=True)
     hdulist.close()
     return
 
@@ -63,22 +67,32 @@ if __name__ == '__main__':
 
     args = argparse.ArgumentParser(description='Calculate for velocity shifts and correct them.')
     args.add_argument('observed', type=str, help='Spectrum')
+    args.add_argument('-p', '--plot', help='plot flag', action='store_true')
     args.add_argument('-t', '--template', type=str, help='Template', choices=['initial.spec', 'HARPS.Archive_Sun-4_norm.fits', 'HARPS.Archive_Arcturus_norm.fits', 'HARPS.GBOG_Procyon_norm.fits'], default='HARPS.Archive_Sun-4_norm.fits')
+    args.add_argument('-o', '--output', type=str, help="Name of output file", default="auto")
     args = args.parse_args()
 
-    template = 'HARPS.Archive_Sun-4_norm.fits'
+    template = args.template
+    observed = args.observed
+    plot_flag = args.plot
+    output = args.output
+
+    print(template, observed, plot_flag, output)
 
     dw, df, d = read_observations(observed, 4000, 6900)
-    plt.plot(dw, df)
-    plt.show()
+    if plot_flag:
+        plt.plot(dw, df)
+        plt.show()
 
     tw, tf = read_template(template)
     dw, df = read_spec(observed)
-    # Plot template and data
-    plt.title("Template (blue) and data (red)")
-    plt.plot(tw, tf, 'b.-')
-    plt.plot(dw, df, 'r.-')
-    plt.show()
+    if plot_flag:
+
+        # Plot template and data
+        plt.title("Template (blue) and data (red)")
+        plt.plot(tw, tf, 'b.-')
+        plt.plot(dw, df, 'r.-')
+        plt.show()
 
     rv = velocity_shift(dw, df, tw, tf)
-    rv_correction(observed, round(rv,3))
+    rv_correction(observed, round(rv,3), output=output)
