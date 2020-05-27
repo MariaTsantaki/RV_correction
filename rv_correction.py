@@ -70,12 +70,14 @@ if __name__ == '__main__':
     args.add_argument('-p', '--plot', help='plot flag', action='store_true')
     args.add_argument('-t', '--template', type=str, help='Template', choices=['initial.spec', 'HARPS.Archive_Sun-4_norm.fits', 'HARPS.Archive_Arcturus_norm.fits', 'HARPS.GBOG_Procyon_norm.fits'], default='HARPS.Archive_Sun-4_norm.fits')
     args.add_argument('-o', '--output', type=str, help="Name of output file", default="auto")
+    args.add_argument('-r', '--rv', type=float, help="radial velocity to correct", default=-99999.99)
     args = args.parse_args()
 
     template = args.template
     observed = args.observed
     plot_flag = args.plot
     output = args.output
+    rv = args.rv
 
     print(template, observed, plot_flag, output)
 
@@ -94,5 +96,7 @@ if __name__ == '__main__':
         plt.plot(dw, df, 'r.-')
         plt.show()
 
-    rv = velocity_shift(dw, df, tw, tf)
+    if rv == -99999.99:
+        rv = velocity_shift(dw, df, tw, tf)
+    print("Correction for rv:", rv)
     rv_correction(observed, round(rv,3), output=output)
