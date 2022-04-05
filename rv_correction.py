@@ -68,12 +68,12 @@ if __name__ == '__main__':
 
     template = 'HARPS.Archive_Sun-4_norm.fits'
 
-    dw, df, d = read_observations(observed, 4000, 6900)
+    dw, df, d = read_observations(args.observed, 4000, 6900)
     plt.plot(dw, df)
     plt.show()
 
     tw, tf = read_template(template)
-    dw, df = read_spec(observed)
+    dw, df = read_spec(args.observed)
     # Plot template and data
     plt.title("Template (blue) and data (red)")
     plt.plot(tw, tf, 'b.-')
@@ -81,4 +81,4 @@ if __name__ == '__main__':
     plt.show()
 
     rv = velocity_shift(dw, df, tw, tf)
-    rv_correction(observed, round(rv,3))
+    rv_correction(args.observed, round(rv,3))
