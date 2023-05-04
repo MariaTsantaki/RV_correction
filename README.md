@@ -12,6 +12,8 @@ The fits file has to be in a specific format:
 
 a fits file (.fits) from the ESO archive (ESO SDP 1D spectrum) or also 1D files which include the key words 'CRVAL1' and 'CDELT1' in their header.
 
+The output is saved in the: fname_rv.fits 
+
 
 AUTHOR
 -------
