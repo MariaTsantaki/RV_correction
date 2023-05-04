@@ -1,20 +1,16 @@
 RV correction
 ======
 
-Correct for radial velocity shifts. 
+Correct for radial velocity shifts. The solar spectrum is used as a template to calculate the cross correlation function. 
 
 It is run:
 
 ```python
 python rv_correction.py fname.fits
 ```
-The fits file has to be in a specific format. 
+The fits file has to be in a specific format:
 
-1) a text file (.dat or .txt) with 2 columns for the wavelength and flux.
-
-2) a fits file (.fits) from the ESO archive (ESO SDP 1D spectrum) and also 1D files which include the key words 'CRVAL1' and 'CDELT1' in their header.
-
-3) a table fits format (.spec). This is the format [FASMA](https://github.com/MariaTsantaki/FASMA-synthesis) saves the output synthetic spectra if requested.  
+a fits file (.fits) from the ESO archive (ESO SDP 1D spectrum) or also 1D files which include the key words 'CRVAL1' and 'CDELT1' in their header.
 
 
 AUTHOR
