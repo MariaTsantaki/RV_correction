@@ -1,15 +1,14 @@
-# -*- coding: utf8 -*-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Oct  6 15:18:39 2022
 
-# My imports
+@author: maria.tsantaki
+"""
+
 from __future__ import division
 import numpy as np
-from scipy.interpolate import InterpolatedUnivariateSpline
-import os
 from astropy.io import fits
-import matplotlib
-
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 
 def eso_fits(hdulist):
     '''A little demo utility to illustrate the ESO SDP 1D spectrum file format.
@@ -37,7 +36,7 @@ def eso_fits(hdulist):
     # 2. value of keyword PRODCATG must match SCIENCE.SPECTRUM*
     if not prodcatg.startswith('SCIENCE.SPECTRUM'):
         errorMessage = "Expected header keyword: PRODCATG = 'SCIENCE.SPECTRUM'\nFound: PRODCATG = '%s'\nFile not compliant with the 1d spectrum specifications\nof the ESO Science Data Product standard." % prodcatg
-        print('filename = %s   NOT COMPLIANT' % filename)
+        print('FILE NOT COMPLIANT')
         print(errorMessage)
         return None
 
@@ -52,7 +51,7 @@ def eso_fits(hdulist):
         specaxisucd  = scihead['TUCD1'] # Gives the type of spectral axis (see SPECTRAL AXIS below)
     except:
         errorMessage='File not compliant with the 1D spectrum specifications of the ESO Science Data Product standard; some of the mandatory keywords were not found in primary header unit'
-        print('filename = %s   NOT COMPLIANT' % filename)
+        print('FILE NOT COMPLIANT')
         print('ERROR = %s' % (errorMessage))
         return None
 
@@ -76,7 +75,7 @@ def eso_fits(hdulist):
     try:
         tfields=int(scihead['TFIELDS'])
     except:
-        print('File %s is not a valid ESO SDP 1d spectrum (TFIELDS keyword missing)' % (filename))
+        print('File is not a valid ESO SDP 1d spectrum (TFIELDS keyword missing)')
         return None
 
     # METADATA PART
@@ -137,15 +136,13 @@ def eso_fits(hdulist):
     flux = np.array(scidata[0][iflux - 1])
     return wave, flux
 
-
 def mad(data, axis=None):
     '''Function to calculate the median average deviation.
     '''
 
     return np.median(np.absolute(data - np.median(data, axis)), axis)
 
-
-def local_norm(obs_fname, r, snr, lol=1.0, plot=False):
+def local_norm(obs_fname, r, snr, lol=1.0):
     '''Very local Normalization function. Makes a linear fit from the maximum points
     of each segment.
     Input
@@ -162,8 +159,8 @@ def local_norm(obs_fname, r, snr, lol=1.0, plot=False):
     '''
 
     # Define the area of Normalization
-    start_norm = r[0] - 2.0
-    end_norm = r[1] + 2.0
+    start_norm = r[0]
+    end_norm = r[1]
     # Transform SNR to noise
     if snr is None:
         noise = 0.0
@@ -177,7 +174,7 @@ def local_norm(obs_fname, r, snr, lol=1.0, plot=False):
     # Clean for cosmic rays
     med = np.median(flux_obs)
     sig = mad(flux_obs)
-    flux_clean = np.where(flux_obs < (med + (sig * 3.0)), flux_obs, med)
+    flux_clean = np.where(flux_obs < (med + (sig * 5.0)), flux_obs, med)
     flux_obs = flux_clean
 
     # Normalization process
@@ -194,29 +191,7 @@ def local_norm(obs_fname, r, snr, lol=1.0, plot=False):
     # Cut to original region
     wave = wave_obs[np.where((wave_obs >= float(r[0])) & (wave_obs <= float(r[1])))]
     new_flux = new_flux[np.where((wave_obs >= float(r[0])) & (wave_obs <= float(r[1])))]
-
-    # This plot is silent
-    if plot:
-        plt.plot(wave_obs, flux_obs, label='raw spectrum')
-        plt.plot(cont_points_wl, cont_points_fl, 'o')
-        plt.xlabel(r'Wavelength $\AA{}$')
-        plt.ylabel('Normalized flux')
-        plt.legend(loc='best', frameon=False)
-        plt.grid(True)
-        plt.show()
-
-        x = [start_norm, end_norm]
-        y = [1.0, 1.0]
-        plt.plot(x, y)
-        plt.plot(wave, new_flux, label='normalized')
-        plt.xlabel(r'Wavelength $\AA{}$')
-        plt.ylabel('Normalized flux')
-        plt.legend(loc='best', frameon=False)
-        plt.grid(True)
-        plt.show()
-
     return wave, new_flux, delta_l
-
 
 def read_observations(fname, start_synth, end_synth):
     '''Read observed spectrum of different types and return wavelength and flux.
@@ -233,13 +208,9 @@ def read_observations(fname, start_synth, end_synth):
     flux_obs : raw observed flux
     '''
 
-    extension = ('.dat', '.txt', '.spec', '.fits')
+    extension = ('.fits')
     if fname.endswith(extension):
-        if (fname[-4:] == '.dat') or (fname[-4:] == '.txt'):
-            with open(fname, 'r') as f:
-                lines = (line for line in f if not line[0].isalpha())  # skip header
-                wave, flux = np.loadtxt(lines, unpack=True, usecols=(0, 1))
-        elif fname[-5:] == '.fits':
+        if fname[-5:] == '.fits':
             hdulist = fits.open(fname)
             header = hdulist[0].header
             if 'PRODCATG' in header:
@@ -264,12 +235,6 @@ def read_observations(fname, start_synth, end_synth):
                 wave_obs, flux_obs, delta_l = (None, None, None)
                 return wave_obs, flux_obs, delta_l
 
-        # These types are produced by FASMA (fits format).
-        elif fname[-5:] == '.spec':
-            hdulist = fits.open(fname)
-            x = hdulist[1].data
-            flux = x['flux']
-            wave = x['wavelength']
         # Cut observations to the intervals of the synthesis
         delta_l = wave[1] - wave[0]
         wave_obs = wave[
@@ -283,6 +248,70 @@ def read_observations(fname, start_synth, end_synth):
         wave_obs, flux_obs, delta_l = (None, None, None)
     return wave_obs, flux_obs, delta_l
 
+def read_raw_observations(fname):
+    '''Read observed spectrum of different types and return wavelength and flux.
+    Input
+    -----
+    fname : filename of the spectrum. These are the approved formats: '.dat', '.txt',
+    '.spec', '.fits'.
+    start_synth : starting wavelength where the observed spectrum is cut
+    end_synth : ending wavelength where the observed spectrum is cut
+
+    Output
+    -----
+    wave_obs : raw observed wavelength
+    flux_obs : raw observed flux
+    '''
+
+    extension = ('.dat', '.txt', '.spec', '.fits')
+    if fname.endswith(extension):
+        if (fname[-4:] == '.dat') or (fname[-4:] == '.txt'):
+            with open(fname, 'r') as f:
+                lines = (line for line in f if not line[0].isalpha())  # skip header
+                wave, flux = np.loadtxt(lines, unpack=True, usecols=(0, 1))
+                start_wave = wave[0]
+        elif fname[-5:] == '.fits':
+            hdulist = fits.open(fname)
+            header = hdulist[0].header
+            if 'PRODCATG' in header:
+                # ESO Product
+                if eso_fits(hdulist) is None:
+                    wave, flux, delta_l, start_wave = (None, None, None, None)
+                    return wave, flux, delta_l, start_wave
+                else:
+                    wave, flux = eso_fits(hdulist)
+                    start_wave = wave[0]
+                    delta_l = wave[1] - wave[0]
+            elif 'CRVAL1' in header:
+                # Only 1-D spectrum accepted.
+                flux = hdulist[0].data  # flux data in the primary
+                flux = np.array(flux, dtype=np.float64)
+                start_wave = header['CRVAL1']  # initial wavelenght
+                # step = header['CD1_1'] # step in wavelenght
+                step = header['CDELT1']  # increment per pixel
+                n = len(flux)
+                w = start_wave + step * n
+                wave = np.linspace(start_wave, w, n, endpoint=False)
+                delta_l = wave[1] - wave[0]
+            else:
+                print('Spectrum is not in acceptable format.')
+                wave, flux, delta_l = (None, None, None, None)
+                return wave, flux, delta_l, start_wave
+
+        # These types are produced by FASMA (fits format).
+        elif fname[-5:] == '.spec':
+            hdulist = fits.open(fname)
+            x = hdulist[1].data
+            flux = x['flux']
+            wave = x['wavelength']
+            start_wave = wave[0]
+            delta_l = wave[1] - wave[0]
+        # Cut observations to the intervals of the synthesis
+        delta_l = wave[1] - wave[0]
+    else:
+        print('Spectrum is not in acceptable format. Convert to ascii or fits.')
+        wave, flux, delta_l, start_wave = (None, None, None, None)
+    return wave, flux, delta_l,  start_wave
 
 def read_obs_intervals(obs_fname, r, snr=None):
     '''Read only the spectral chunks from the observed spectrum and normalize
@@ -312,48 +341,6 @@ def read_obs_intervals(obs_fname, r, snr=None):
 
     print('SNR: %s' % snr)
     return xobs, yobs, delta_l
-
-
-def plot(xobs, yobs, xinit, yinit, xfinal, yfinal, res=False):
-    '''Function to plot synthetic and observed spectra.
-    Input
-    -----
-    xobs : observed wavelength
-    yobs : observed flux
-    xinit : synthetic wavelength with initial parameters
-    yinit : synthetic flux with initial parameters
-    xfinal : synthetic wavelength with final parameters
-    yfinal : synthetic flux with final parameters
-    res: Flag to plot residuals
-
-    Output
-    ------
-    plots
-    '''
-
-    # if nothing exists, pass
-    if (xobs is None) and (xinit is None):
-        pass
-    # if there is not observed spectrum, plot only synthetic
-    if xobs is None:
-        plt.plot(xinit, yinit, label='synthetic')
-    # if all exist
-    else:
-        plt.plot(xinit, yinit, label='initial synthetic')
-        plt.plot(xobs, yobs, label='observed')
-        if xfinal is not None:
-            plt.plot(xfinal, yfinal, label='final synthetic')
-        if res:
-            sl = InterpolatedUnivariateSpline(xfinal, yfinal, k=1)
-            ymodel = sl(xobs)
-            plt.plot(xobs, (yobs - ymodel) * 10, label='residuals x10')
-    plt.xlabel(r'Wavelength $\AA{}$')
-    plt.ylabel('Normalized flux')
-    plt.legend(loc='best', frameon=False)
-    plt.grid(True)
-    plt.show()
-    return
-
 
 def snr(fname, plot=False):
     '''Calculate SNR using for various intervals.
