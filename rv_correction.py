@@ -117,7 +117,7 @@ if __name__ == '__main__':
 
     template = 'HARPS.Archive_Sun-4_norm.fits'
     tw, tf = read_template(template)
-    ffiles = glob.glob("slow_single_stars/*.fits")
+    ffiles = glob.glob("data/*.fits")
     
     for observed in ffiles:
         name = observed.split('/')[-1].split('_')[0]
