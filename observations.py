@@ -468,26 +468,23 @@ def snr(fname, plot=False):
 
     # These regions are relatively free from absorption.
     snr_regions = [
-        [5744, 5746],
+        # [5744, 5746],
         [6048, 6052],
         [6068, 6076],
         [6682, 6686],
         [6649, 6652],
         [6614, 6616],
-        [5438.5, 5440],
-        [5449.5, 5051],
-        [5458, 5459.25],
-        [5498.3, 5500],
-        [5541.5, 5542.5],
+        # [5438.5, 5440],
+        # [5449.5, 5051],
+        # [5458, 5459.25],
+        # [5498.3, 5500],
+        # [5541.5, 5542.5],
     ]
 
     snr = [sub_snr(snr_region) for snr_region in snr_regions]
-
-    if len(snr):
-        snr = [value for value in snr if value != 0]
-        snr_clean = [value for value in snr if not np.isnan(value)]
-        snr_total = np.median(snr_clean)
-        snr = int(snr_total)
-        return snr
-    else:
+    snr = np.median(snr)
+    snr = int(snr)
+    if snr == 0:
         return None
+    else:
+        return snr
