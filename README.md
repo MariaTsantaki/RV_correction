@@ -1,12 +1,12 @@
 RV correction
 ======
 
-Correct for radial velocity shifts. The solar spectrum is used as a template to calculate the cross correlation function. 
+Correct for radial velocity shifts. The solar spectrum is used as a template to calculate the cross correlation function. The code will read all spectra in the data folder.
 
 It is run:
 
 ```python
-python rv_correction.py fname.fits
+python rv_correction.py 
 ```
 The fits file has to be in a specific format:
 
