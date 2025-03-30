@@ -8,7 +8,9 @@ Created on Thu Oct  6 15:18:39 2022
 
 from __future__ import division
 import numpy as np
+from scipy.interpolate import InterpolatedUnivariateSpline
 from astropy.io import fits
+import matplotlib.pyplot as plt
 
 def eso_fits(hdulist):
     '''A little demo utility to illustrate the ESO SDP 1D spectrum file format.
@@ -142,7 +144,7 @@ def mad(data, axis=None):
 
     return np.median(np.absolute(data - np.median(data, axis)), axis)
 
-def local_norm(obs_fname, r, snr, lol=1.0):
+def local_norm(obs_fname, r, snr, lol=1.0, plot=False):
     '''Very local Normalization function. Makes a linear fit from the maximum points
     of each segment.
     Input
@@ -159,8 +161,8 @@ def local_norm(obs_fname, r, snr, lol=1.0):
     '''
 
     # Define the area of Normalization
-    start_norm = r[0]
-    end_norm = r[1]
+    start_norm = r[0] - 2.0
+    end_norm = r[1] + 2.0 
     # Transform SNR to noise
     if snr is None:
         noise = 0.0
@@ -174,7 +176,7 @@ def local_norm(obs_fname, r, snr, lol=1.0):
     # Clean for cosmic rays
     med = np.median(flux_obs)
     sig = mad(flux_obs)
-    flux_clean = np.where(flux_obs < (med + (sig * 5.0)), flux_obs, med)
+    flux_clean = np.where(flux_obs < (med + (sig * 3.0)), flux_obs, med)
     flux_obs = flux_clean
 
     # Normalization process
@@ -191,6 +193,26 @@ def local_norm(obs_fname, r, snr, lol=1.0):
     # Cut to original region
     wave = wave_obs[np.where((wave_obs >= float(r[0])) & (wave_obs <= float(r[1])))]
     new_flux = new_flux[np.where((wave_obs >= float(r[0])) & (wave_obs <= float(r[1])))]
+
+    # This plot is silent
+    if plot:
+        plt.plot(wave_obs, flux_obs, label='raw spectrum')
+        plt.xlabel(r'Wavelength $\AA{}$')
+        plt.ylabel('Normalized flux')
+        plt.legend(loc='best', frameon=False)
+        plt.grid(True)
+        plt.show()
+
+        x = [start_norm, end_norm]
+        y = [1.0, 1.0]
+        plt.plot(x, y)
+        plt.plot(wave, new_flux, label='normalized')
+        plt.xlabel(r'Wavelength $\AA{}$')
+        plt.ylabel('Normalized flux')
+        plt.legend(loc='best', frameon=False)
+        plt.grid(True)
+        plt.show()
+
     return wave, new_flux, delta_l
 
 def read_observations(fname, start_synth, end_synth):
@@ -208,9 +230,13 @@ def read_observations(fname, start_synth, end_synth):
     flux_obs : raw observed flux
     '''
 
-    extension = ('.fits')
+    extension = ('.dat', '.txt', '.spec', '.fits')
     if fname.endswith(extension):
-        if fname[-5:] == '.fits':
+        if (fname[-4:] == '.dat') or (fname[-4:] == '.txt'):
+            with open(fname, 'r') as f:
+                lines = (line for line in f if not line[0].isalpha())  # skip header
+                wave, flux = np.loadtxt(lines, unpack=True, usecols=(0, 1))
+        elif fname[-5:] == '.fits':
             hdulist = fits.open(fname)
             header = hdulist[0].header
             if 'PRODCATG' in header:
@@ -235,6 +261,12 @@ def read_observations(fname, start_synth, end_synth):
                 wave_obs, flux_obs, delta_l = (None, None, None)
                 return wave_obs, flux_obs, delta_l
 
+        # These types are produced by FASMA (fits format).
+        elif fname[-5:] == '.spec':
+            hdulist = fits.open(fname)
+            x = hdulist[1].data
+            flux = x['flux']
+            wave = x['wavelength']
         # Cut observations to the intervals of the synthesis
         delta_l = wave[1] - wave[0]
         wave_obs = wave[
@@ -311,7 +343,7 @@ def read_raw_observations(fname):
     else:
         print('Spectrum is not in acceptable format. Convert to ascii or fits.')
         wave, flux, delta_l, start_wave = (None, None, None, None)
-    return wave, flux, delta_l,  start_wave
+    return wave, flux, delta_l, start_wave
 
 def read_obs_intervals(obs_fname, r, snr=None):
     '''Read only the spectral chunks from the observed spectrum and normalize
@@ -341,6 +373,46 @@ def read_obs_intervals(obs_fname, r, snr=None):
 
     print('SNR: %s' % snr)
     return xobs, yobs, delta_l
+
+def plot(xobs, yobs, xinit, yinit, xfinal, yfinal, res=False):
+    '''Function to plot synthetic and observed spectra.
+    Input
+    -----
+    xobs : observed wavelength
+    yobs : observed flux
+    xinit : synthetic wavelength with initial parameters
+    yinit : synthetic flux with initial parameters
+    xfinal : synthetic wavelength with final parameters
+    yfinal : synthetic flux with final parameters
+    res: Flag to plot residuals
+
+    Output
+    ------
+    plots
+    '''
+
+    # if nothing exists, pass
+    if (xobs is None) and (xinit is None):
+        pass
+    # if there is not observed spectrum, plot only synthetic
+    if xobs is None:
+        plt.plot(xinit, yinit, label='synthetic')
+    # if all exist
+    else:
+        plt.plot(xinit, yinit, label='initial synthetic')
+        plt.plot(xobs, yobs, label='observed')
+        if xfinal is not None:
+            plt.plot(xfinal, yfinal, label='final synthetic')
+        if res:
+            sl = InterpolatedUnivariateSpline(xfinal, yfinal, k=1)
+            ymodel = sl(xobs)
+            plt.plot(xobs, (yobs - ymodel) * 10, label='residuals x10')
+    plt.xlabel(r'Wavelength $\AA{}$')
+    plt.ylabel('Normalized flux')
+    plt.legend(loc='best', frameon=False)
+    plt.grid(True)
+    plt.show()
+    return
 
 def snr(fname, plot=False):
     '''Calculate SNR using for various intervals.
