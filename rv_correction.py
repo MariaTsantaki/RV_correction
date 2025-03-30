@@ -130,7 +130,7 @@ if __name__ == '__main__':
         # plt.plot(dw, df)
         # plt.plot(tw, tf, 'b.-')
         # plt.show()
-    else:
+        else:
             rv = velocity_shift(dw, df, tw, tf, name=name, plot=False)
             # Apply RV correction and plot if significant
             rv_correction(observed, round(rv, 2))
